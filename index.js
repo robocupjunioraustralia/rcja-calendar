@@ -92,7 +92,7 @@ app.get("/file", async (req, res) => {
         summary: "RCJA " + event.name + " (" + cachedStates.find(state => state.id === event.state).abbreviation + ")", 
         description: eventDescription,
         allDay: true,
-        location: event.venue.name + ", " + event.venue.address,
+        location: event.venue ? event.venue.name + ", " + event.venue.address : "",
         organizer: event.directEnquiriesTo.fullName + " <" + event.directEnquiriesTo.email + ">",
         url: `https://enter.robocupjunior.org.au/events/${event.id}`,
       });
