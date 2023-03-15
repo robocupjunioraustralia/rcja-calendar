@@ -11,8 +11,23 @@ let cachedEvents = null;
 
 const app = express();
 app.set('case sensitive routing', false);
-app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
+
+morgan.token('statusColor', (req, res, args) => {
+  var status = (typeof res.headersSent !== 'boolean' ? Boolean(res.header) : res.headersSent)
+      ? res.statusCode
+      : undefined
+
+  // get status color
+  var color = status >= 500 ? 31 // red
+      : status >= 400 ? 33 // yellow
+      : status >= 300 ? 36 // cyan
+      : status >= 200 ? 32 // green
+      : 0; // no color
+
+  return '\x1b[' + color + 'm' + status + '\x1b[0m';
+});
+app.use(morgan(':statusColor :method :url - :response-time ms - :remote-addr :remote-user'));
 
 // Background task to fetch events from the RCJA Entry System API and store them in a local cache
 // This is to avoid having to make a request to the API every time a user requests a calendar file
