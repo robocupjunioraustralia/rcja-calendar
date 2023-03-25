@@ -29,6 +29,18 @@ morgan.token('statusColor', (req, res, args) => {
 });
 app.use(morgan(':statusColor :method :url - :response-time ms - :remote-addr :remote-user'));
 
+// State RCJ title mapping information, will fall back to "RCJA" if no mapping is found
+const stateTitleMapping = {
+  "VIC": "RCJV",
+  "NSW": "RCJNSW",
+  "QLD": "RCJQ",
+  "SA": "RCJSA",
+  "WA": "RCJWA",
+  "NT": "RCJNT",
+  "ACT": "RCJACT",
+  "TAS": "RCJTAS",
+  "NAT": "RCJA"
+}
 // Background task to fetch events from the RCJA Entry System API and store them in a local cache
 // This is to avoid having to make a request to the API every time a user requests a calendar file
 const fetchEvents = async () => {
@@ -101,14 +113,15 @@ app.get("/file", async (req, res) => {
                         + `\n\n${event.bleachedEventDetails}`
                         + `\n\n\n${event.registrationURL}`;
 
+      const currentState = cachedStates.find(state => state.id === event.state);
+      
       calendar.createEvent({
         start: new Date(event.startDate),
         end: new Date(new Date(event.endDate).setDate(new Date(event.endDate).getDate() + 1)),
-        summary: "RCJA " + event.name + " (" + cachedStates.find(state => state.id === event.state).abbreviation + ")", 
+        summary: `${stateTitleMapping[currentState.abbreviation] || "RCJA"} ${event.name} (${currentState.abbreviation})`, 
         description: eventDescription,
         allDay: true,
         location: event.venue ? event.venue.name + ", " + event.venue.address : "",
-        organizer: event.directEnquiriesTo.fullName + " <" + event.directEnquiriesTo.email + ">",
         url: `https://enter.robocupjunior.org.au/events/${event.id}`,
       });
     });
