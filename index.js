@@ -103,7 +103,7 @@ app.get("/file", async (req, res) => {
 
       calendar.createEvent({
         start: new Date(event.startDate),
-        end: new Date(event.endDate),
+        end: new Date(new Date(event.endDate).setDate(new Date(event.endDate).getDate() + 1)),
         summary: "RCJA " + event.name + " (" + cachedStates.find(state => state.id === event.state).abbreviation + ")", 
         description: eventDescription,
         allDay: true,
