@@ -57,6 +57,7 @@ const fetchEvents = async () => {
       const { data: stateEvents } = await axios.get(
         `https://enter.robocupjunior.org.au/api/v1/public/states/${state.abbreviation}/upcomingEvents/`
       );
+      stateEvents.forEach(event => event.realStateAbbr = state.abbreviation);
       events[state.abbreviation] = stateEvents;
     }
     
@@ -102,7 +103,7 @@ app.get("/file", async (req, res) => {
     });
     
     events.forEach((event) => {
-      const eventDescription = `${event.name} (${cachedStates.find(state => state.id === event.state).name})`
+      const eventDescription = `${event.name} (${event.realStateAbbr})`
                         + `\n\nEvent type: ${event.eventType.toLowerCase().replace(/(^|\s)\S/g, L => L.toUpperCase())}`
                         + `\n\nStart date: ${event.startDate}`
                         + `\nEnd date: ${event.endDate}`
@@ -113,12 +114,10 @@ app.get("/file", async (req, res) => {
                         + `\n\n${event.bleachedEventDetails}`
                         + `\n\n\n${event.registrationURL}`;
 
-      const currentState = cachedStates.find(state => state.id === event.state);
-      
       calendar.createEvent({
         start: new Date(event.startDate),
         end: new Date(new Date(event.endDate).setDate(new Date(event.endDate).getDate() + 1)),
-        summary: `${stateTitleMapping[currentState.abbreviation] || "RCJA"} ${event.name} (${currentState.abbreviation})`, 
+        summary: `${stateTitleMapping[event.realStateAbbr] || "RCJA"} ${event.name} (${event.realStateAbbr})`, 
         description: eventDescription,
         allDay: true,
         location: event.venue ? event.venue.name + ", " + event.venue.address : "",
