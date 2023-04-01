@@ -9,171 +9,432 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/index.global.min.js"></script>
     <title>RCJA Calendar</title>
-
+    
     <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-
-        .column {
-            max-width: 100%;
-        }
-
-        .logincontent {
-            padding-top: 10%;
-        }
-
-        body {
+        body:not(.isEmbed) {
             background-image: url("/homeimage.jpg");
-            /* Full height */
-            height: 100%;
             width: auto;
-            overflow: hidden;
-            /* Center and scale the image nicely */
             background-position: center;
             background-repeat: no-repeat;
             background-size: cover;
-
+            background-attachment: fixed;
         }
-
-        .ui.middle {
-            height: 100%;
-            margin: 4px;
+        
+        .vertCenter {
+            height: 100vh;
+            width: 100%;
         }
-
+        
         .ui.modal.smallModal {
             max-width: 600px;
         }
+        
+        .ui.segment {
+            max-width: 1400px !important;
+            margin-top: 20px !important;
+            margin: auto !important;
+        }
+
+        #calendar {
+            min-height: 80vh;
+            max-height: 80vh;
+        }
+
+        #calendarEmbed {
+            height: 90%;
+            width: 100%;
+        }
+
+        #embedContainer {
+            height: 100%;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .ui.grid {
+            margin: auto !important;
+        }
+
+        .ui[class*="right icon"].label>.icon {
+            font-size: 10px;
+            width: 7px;
+        }
+
+        .controlBtns {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+.fc-event{
+    cursor: pointer;
+}
+
+/* default styles for all screen sizes */
+.fc-header-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.fc-toolbar-chunk {
+  margin-top: 5px;
+}
+
+/* styles for screen sizes 600px and smaller */
+@media (max-width: 600px) {
+  .fc-toolbar-chunk:nth-child(2) {
+    order: -1; /* move second chunk (Year/Month Text) to beginning of row */
+    flex-basis: 100%;
+  }
+  .controlBtns {
+    flex-direction: column;
+  }
+}
+
+/* styles for screen sizes 400px and smaller */
+@media (max-width: 400px) {
+  .fc-toolbar-chunk {
+    order: 0; /* reset order to default */
+    flex-basis: 100%;
+    margin-top: 5px;
+  }
+}
+
+
     </style>
 </head>
-<body>
-    <div class="ui middle aligned center aligned grid">
-        <div class="sixteen wide mobile ten wide tablet six wide computer four wide widescreen column ui segment">
-            <div class = "form-group ">
-                <div>
-                    <h1>RoboCup Junior Australia</h1>
-                    <div class="ui large">
-                        <p>Use the following options to configure the calendar</p>
-                        <div class="ui red message hidden" id="alert-type">
-                            You must select a type (competitions, workshops, or both)
-                        </div>
-                        <div class="ui sub header">Filter to Specific Regions</div>
-                        <div class="ui fluid multiple search selection dropdown" id="regionDropdown">
-                            <input name="regions" type="hidden" class="" id="option-regions">
-                            <input class="search" autocomplete="fomantic-search" tabindex="0">
-                            <div class="default text">Select Regions (Leave blank for all)</div>
-                            <i class="dropdown icon"></i>
-
-                            <div class="menu transition hidden" tabindex="-1">
-                                <div class="item" data-value="NAT">National</div>
-                                <div class="item" data-value="ACT">ACT</div>
-                                <div class="item" data-value="NSW">NSW</div>
-                                <div class="item" data-value="NT">NT</div>
-                                <div class="item" data-value="QLD">QLD</div>
-                                <div class="item" data-value="SA">SA</div>
-                                <div class="item" data-value="TAS">TAS</div>
-                                <div class="item" data-value="VIC">VIC</div>
-                                <div class="item" data-value="WA">WA</div>
-                            </div>
+<body class="isEmbed">
+    <div class="ui grid middle aligned vertCenter" id="normalContainer" style="display: none">
+        <div class="row">
+            <div class="column">
+                <div class="ui text container segment">
+                    <div class="controlBtns">
+                        <div class="ui middle aligned labels" data-regionToggles></div>
+                        <div class="ui labels" style="margin-left: auto;">
+                            <a class="ui icon label" style="background-color: #009c95; color: white" href="https://rcja.app/calendar/sync">
+                                <i class="icon calendar alternate outline" style="margin-right: 4px"></i>
+                                Sync to your calendar
+                            </a>
                         </div>
                     </div>
                     <br>
-                    <div class="ui checkbox">
-                        <input type="checkbox" id="option-competitions" checked>
-                        <label>Competitions&nbsp&nbsp</label>
-                    </div>
-                    <div class="ui checkbox">
-                        <input type="checkbox" id="option-workshops" checked>
-                        <label>Workshops</label>
-                    </div>
-                    <br><br>
-                    <button class="ui button primary" id="btn-submit">
-                        Copy Calendar Link
-                    </button>
+                    <div id='calendar'></div>
                 </div>
             </div>
         </div>
     </div>
-    <div id="copyModal" class="ui modal smallModal">
-        <div class="header">Calendar Link</div>
-        <div class="content">
-            Use the following link to add the calendar to your favourite calendar app.
-            <br>
-            Click here for 
-                <a href="https://support.microsoft.com/en-us/office/import-or-subscribe-to-a-calendar-in-outlook-com-cff1429c-5af6-41ec-a5b4-74f2c278e98c" target="_blank">Microsoft Outlook</a>, 
-                <a href="https://support.google.com/calendar/answer/37100?hl=en" target="_blank">Google Calendar</a>, or 
-                <a href="https://support.apple.com/en-au/guide/calendar/icl1022/11.0/mac/13.0" target="_blank">Apple Calendar</a> instructions
-            <br><br>
-            <div class="ui info message" id="textToCopy"></div>
+    <div id="embedContainer" style="display: none">
+        <div class="controlBtns">
+            <div class="ui labels" data-regionToggles></div>
+            <div class="ui labels" style="margin-left: auto;">
+                <a class="ui icon label" style="background-color: #009c95; color: white" href="https://rcja.app/calendar/sync">
+                    <i class="icon calendar alternate outline" style="margin-right: 4px"></i>
+                    Sync to your calendar
+                </a>
+            </div>
         </div>
-        <div class="actions">
-            <div class="ui primary button" onclick="copyText()" id="copyTextBtn">Copy to clipboard</div>
-            <div class="ui cancel button">Cancel</div>
-        </div>
+        <br>
+        <div id='calendarEmbed'></div>
+    </div>
+    <div id="eventModal" class="ui modal smallModal">
+        <div class="header"></div>
+        <div class="content"></div>
     </div>
 <script>
-    $('input[type="checkbox"]').change(refreshForm)
-    $('#btn-submit').click(copyLink)
-    $('#regionDropdown').dropdown({
-        onChange: refreshForm
+    const icon_add = "plus";
+    const icon_remove = "close";
+
+    const regionColours = {
+        "NSW": "#ef476f",
+        "QLD": "#f78c6b",
+        "SA": "#ffd166",
+        "TAS": "#83d483",
+        "VIC": "#06d6a0",
+        "WA": "#06d6a0",
+        "ACT": "#0cb0a9",
+        "NT": "#118ab2",
+        "NAT": "#073b4c",
+        "_OTHER": "#052833"
+    }
+    const regions = ["NSW", "QLD", "SA", "TAS", "VIC", "WA", "ACT", "NT", "NAT"];
+    let otherRegions = [];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedRegions = urlParams.get('regions');
+    const isEmbed = urlParams.get('embed') == "true";
+    
+    const viewOptions = ["multiMonthYear", "dayGridMonth", "listYear"]
+    let preventResize = false;
+    let initialView = urlParams.get('view');
+    if (initialView !== undefined) { preventResize = true; }
+    if (!["multiMonthYear", "dayGridMonth", "listYear"].includes(initialView)) {
+        initialView = "multiMonthYear";
+    }
+
+    if (isEmbed) {
+        document.body.classList.add("isEmbed");
+        document.getElementById("normalContainer").style.display = "none"; 
+        document.getElementById("embedContainer").style.display = ""; 
+    } else {
+        document.body.classList.remove("isEmbed");
+        document.getElementById("normalContainer").style.display = ""; 
+        document.getElementById("embedContainer").style.display = "none"; 
+    }
+    
+    const calendarEl = document.getElementById(isEmbed ? 'calendarEmbed' : 'calendar');
+    let calendar = null;
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: initialView,
+            initialDate: '2023-03-07',
+            multiMonthMaxColumns: 2,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: viewOptions.join(",")
+            },
+            eventClick: onEventClick
+        });
+        
+        for (const region of regions) {
+            const isRequested = requestedRegions?.includes(region) || !requestedRegions;
+            if (isRequested) {
+                addRegionEventSource(region);
+            }
+            
+            $('[data-regionToggles]').append(`
+                <a 
+                    class="ui right icon label${isRequested ? " active" : ""}" 
+                    style="${isRequested ? "background-color: " + regionColours[region] + "; color: white" : ""}" 
+                    data-region="${region}"
+                    onclick="toggleRegion('${region}')"
+                >
+                ${region} 
+                    <i class="icon ${icon_remove}" style="${isRequested ? "" : "display: none"}"></i>
+                    <i class="icon ${icon_add}" style="${isRequested ? "display: none" : ""}"></i>
+                </a>
+            `);
+        }
+        
+        calendar.render();
+    
+        $.ajax({
+            url: 'https://rcja.app/calendar/api/regions',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                for (const region of data) {
+                    if (!regionColours.hasOwnProperty(region.abbreviation)) {
+                        otherRegions.push(region.abbreviation);
+                    }
+                }
+
+                if (otherRegions.length > 0) {
+                    $('[data-regionToggles]').append(`
+                        <a 
+                            class="ui right icon label active" 
+                            style="background-color: ${regionColours["_OTHER"]}; color: white" 
+                            data-region="_OTHER"
+                            onclick="toggleOtherRegions()"
+                        >
+                            Misc
+                            <i class="icon ${icon_remove}"></i>
+                            <i class="icon ${icon_add}" style="display: none"></i>
+                        </a>
+                    `);
+
+                    addOtherRegionEventSources();
+                }
+            },
+            error: function() {
+                console.log("Error getting regions");
+            }
+        });
+
+        // On browser resize, if reaches 600px, change to list view
+        function resize() {
+            if (preventResize) {
+                return;
+            }
+            if ($(window).width() < 800) {
+                calendar.changeView('listYear');
+            } else if ($(window).width() < 1200) {
+                calendar.changeView('dayGridMonth');
+            } else {
+                calendar.changeView('multiMonthYear');
+            }
+        }
+        $(window).resize(resize);
+        resize();
     });
 
-    let opt = { regions: "", competitions: true, workshops: true }
-    let formValidity = 1; // 0 = No type, 1 = Acceptable
 
-    function refreshForm() {
-        $('#alert-region').addClass('hidden');
-        $('#alert-type').addClass('hidden');
-
-        opt = {
-            regions: document.getElementById('option-regions').value,
-            competitions: document.getElementById('option-competitions').checked,
-            workshops: document.getElementById('option-workshops').checked,
-        }
-
-        if ((!opt.competitions && !opt.workshops)) {
-            $('#btn-submit').removeClass('primary');
-            formValidity = 0;
-        } else {
-            $('#btn-submit').addClass('primary');
-            formValidity = 1;
-        }
-    }
-
-    function copyLink() {
-        if (formValidity === 0) {
-            $('#alert-type').removeClass('hidden');
-            return;
-        }
-        // Create URL params, regionString should be regions=${opt.regions} only if opt.regions is not empty
-        // Then workshops and competitions should just be on their own if they are true (no need for a value) otherwise leave out
-        let params = [];
-        if (opt.regions) { params.push(`regions=${opt.regions}`); }
-        if (!opt.competitions) { params.push(`hide=competitions`); }
-        if (!opt.workshops) { params.push(`hide=workshops`); }
-
-        const url = `https://rcja.app/calendar/file${params.length > 0 ? "?" + params.join('&') : ""}`;
+    function toggleRegion(region) {
+        const regionLabel = document.querySelector(`a[data-region="${region}"]`);
         
-        document.getElementById('textToCopy').textContent = url;
-        openModal();
+        if (regionLabel.classList.contains('active')) {
+            regionLabel.classList.remove('active');
+            
+            regionLabel.style.backgroundColor = "";
+            regionLabel.style.color = "";
+            
+            regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
+            regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
+            calendar.getEventSources().forEach((source) => {
+                if (source.internalEventSource.publicId === region) {
+                    source.remove();
+                }
+            });
+        } else {
+            regionLabel.classList.add('active');
+            
+            regionLabel.style.backgroundColor = regionColours[region];
+            regionLabel.style.color = "white";
+            
+            regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
+            regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
+            
+            addRegionEventSource(region);
+        }
+    }
+    
+    function addRegionEventSource(region) {
+        calendar.addEventSource({
+            id: region,
+            events: function(info, successCallback, failureCallback) {
+                $.ajax({
+                    url: 'https://rcja.app/calendar/api/events/json?regions=' + region,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        let eventData = [];
+                        for (const event of data) {
+                            eventData.push({
+                                title: event.title,
+                                start: event.start,
+                                end: event.end,
+                                allDay: event.allDay,
+                                color: regionColours[event.state],
+                                eventDetails: event,
+                            });
+                        }
+                        successCallback(eventData);
+                    },
+                    error: function(err) {
+                        console.log(err);
+                        failureCallback(err);
+                    }
+                });
+            },
+        });
     }
 
-    function openModal() {
-        $('#copyModal').modal('show');
+    function addOtherRegionEventSources() {
+        for (const region of otherRegions) {
+            calendar.addEventSource({
+                id: region,
+                events: function(info, successCallback, failureCallback) {
+                    $.ajax({
+                        url: 'https://rcja.app/calendar/api/events/json?regions=' + region,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function(data) {
+                            let eventData = [];
+                            for (const event of data) {
+                                eventData.push({
+                                    title: event.title,
+                                    start: event.start,
+                                    end: event.end,
+                                    allDay: event.allDay,
+                                    color: regionColours["_OTHER"],
+                                    eventDetails: event,
+                                });
+                            }
+                            successCallback(eventData);
+                        },
+                        error: function(err) {
+                            console.log(err);
+                            failureCallback(err);
+                        }
+                    });
+                },
+            });
+        }
     }
 
-    function copyText() {
-        var text = document.getElementById("textToCopy").textContent;
-        navigator.clipboard.writeText(text);
+    function toggleOtherRegions() {
+        const regionLabel = document.querySelector(`a[data-region="_OTHER"]`);
+        
+        if (regionLabel.classList.contains('active')) {
+            regionLabel.classList.remove('active');
+            
+            regionLabel.style.backgroundColor = "";
+            regionLabel.style.color = "";
+            
+            regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
+            regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
+            calendar.getEventSources().forEach((source) => {
+                if (otherRegions.includes(source.internalEventSource.publicId)) {
+                    source.remove();
+                }
+            });
+        } else {
+            regionLabel.classList.add('active');
+            
+            regionLabel.style.backgroundColor = regionColours["_OTHER"];
+            regionLabel.style.color = "white";
+            
+            regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
+            regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
+            
+            addOtherRegionEventSources();
+        }
+    }
 
-        $('#copyTextBtn').text('Copied!');
-        setTimeout(() => {
-            $('#copyModal').modal('hide');
-            $('#copyTextBtn').text('Copy to clipboard');
-        }, 1000);
+
+    function onEventClick(info) {
+        const eventDetails = info.event.extendedProps.eventDetails;
+        
+        $('#eventModal .header').html(eventDetails.title);
+        $("#eventModal .content").html(`
+            <div class="ui relaxed divided list">
+                <div class="item">
+                    <div class="header"><strong>Registrations Open:</strong></div>
+                    <div class="content">${eventDetails.registrationsOpenDate} to ${eventDetails.registrationsCloseDate}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Event Date:</strong></div>
+                    <div class="content">${eventDetails.startDate}${eventDetails.startDate !== eventDetails.endDate ? ' to ' + eventDetails.endDate : ''}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Direct Enquiries To:</strong></div>
+                    <div class="content">${eventDetails.enquiries}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Available Divisions:</strong></div>
+                    <div class="content">${eventDetails.availableDivisions}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Venue:</strong></div>
+                    <div class="content">${eventDetails.venue}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Event Type:</strong></div>
+                    <div class="content">${eventDetails.eventType}</div>
+                </div>
+                <div class="item">
+                    <div class="header"><strong>Registration Link:</strong></div>
+                    <div class="content"><a href="${eventDetails.registrationURL}" target="_blank">${eventDetails.registrationURL}</a></div>
+                </div>
+                <div class="item" style="${eventDetails.bleachedEventDetails ? '' : 'display: none'};">
+                    <div class="header"><strong>Description:</strong></div>
+                    <div class="content">${eventDetails.bleachedEventDetails.replace("\n", "<br>")}</div>
+                </div>
+            </div>
+        `);
+        $('#eventModal').modal('show');
     }
 </script>
 </body>

@@ -134,6 +134,86 @@ app.get("/file", async (req, res) => {
   }
 });
 
+app.get("/api/events/json", async (req, res) => {
+  if (!cachedEvents) {
+    res.status(503).send({ error: "Events cache is not yet populated, please try again shortly." });
+    return;
+  }
+  try {
+    let events = [];
+    
+    let stateCodes = Object.keys(cachedEvents);
+    let requestedStateCodes = req.query.regions ? req.query.regions.split(",") : stateCodes;
+
+    // make sure all requestedStateCodes match stateCodes
+    if (requestedStateCodes.some(state => !stateCodes.includes(state))) {
+      res.status(400).send({ error: "Invalid state code(s) provided." });
+      return;
+    }
+
+    requestedStateCodes.forEach(state => {
+      if (req.query.hide !== "competitions") events = events.concat(cachedEvents[state].filter(event => event.eventType === "competition"));
+      if (req.query.hide !== "workshops") events = events.concat(cachedEvents[state].filter(event => event.eventType === "workshop"));
+    });
+
+    let eventsReturn = [];
+    events.forEach(event => {
+      const eventDescription = `${event.name} (${event.realStateAbbr})`
+                        + `\n\nEvent type: ${event.eventType.toLowerCase().replace(/(^|\s)\S/g, L => L.toUpperCase())}`
+                        + `\n\nStart date: ${event.startDate}`
+                        + `\nEnd date: ${event.endDate}`
+                        + `\nRegistrations open: ${event.registrationsOpenDate}`
+                        + `\nRegistrations close: ${event.registrationsCloseDate}`
+                        + `\n\nDirect enquiries to: ${event.directEnquiriesTo.fullName} (${event.directEnquiriesTo.email})`
+                        + `\nAvailable divisions: ${event.availabledivisions.map(division => division.name).join(", ")}`
+                        + `\n\n${event.bleachedEventDetails}`
+                        + `\n\n\n${event.registrationURL}`;
+
+      eventsReturn.push({
+        id: event.id,
+        title: `${event.name} (${event.realStateAbbr})`,
+        registrationsOpenDate: event.registrationsOpenDate,
+        registrationsCloseDate: event.registrationsCloseDate,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        start: new Date(event.startDate).toISOString(),
+        end: new Date(new Date(event.endDate).setDate(new Date(event.endDate).getDate() + 1)).toISOString(),
+        enquiries: `${event.directEnquiriesTo.fullName} (${event.directEnquiriesTo.email})`,
+        availableDivisions: event.availabledivisions.map(division => division.name).join(", "),
+        venue: event.venue ? event.venue.name + ", " + event.venue.address : "",
+        state: event.realStateAbbr,
+        eventType: event.eventType,
+        registrationURL: event.registrationURL,
+        bleachedEventDetails: event.bleachedEventDetails,
+        allDay: true,
+      });
+    });
+
+    res.send(eventsReturn);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: error.message });
+  }
+});
+
+app.get("/api/regions", async (req, res) => {
+  if (!cachedStates) {
+    res.status(503).send({ error: "States cache is not yet populated, please try again shortly." });
+    return;
+  }
+  try {
+    res.send(cachedStates);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+app.get("/sync", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/sync.html"));
+});
+
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public/calendar.html"));
 });

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js"></script>
+
+    <title>RCJA Calendar</title>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        .column {
+            max-width: 100%;
+        }
+
+        .logincontent {
+            padding-top: 10%;
+        }
+
+        body {
+            background-image: url("/homeimage.jpg");
+            /* Full height */
+            height: 100%;
+            width: auto;
+            overflow: hidden;
+            /* Center and scale the image nicely */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+
+        }
+
+        .ui.middle {
+            height: 100%;
+            margin: 4px;
+        }
+
+        .ui.modal.smallModal {
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui middle aligned center aligned grid">
+        <div class="sixteen wide mobile ten wide tablet six wide computer four wide widescreen column ui segment">
+            <div class = "form-group ">
+                <div>
+                    <h1>RoboCup Junior Australia</h1>
+                    <div class="ui large">
+                        <p>Use the following options to configure the calendar</p>
+                        <div class="ui red message hidden" id="alert-type">
+                            You must select a type (competitions, workshops, or both)
+                        </div>
+                        <div class="ui sub header">Filter to Specific Regions</div>
+                        <div class="ui fluid multiple search selection dropdown" id="regionDropdown">
+                            <input name="regions" type="hidden" class="" id="option-regions">
+                            <input class="search" autocomplete="fomantic-search" tabindex="0">
+                            <div class="default text">Select Regions (Leave blank for all)</div>
+                            <i class="dropdown icon"></i>
+
+                            <div class="menu transition hidden" tabindex="-1">
+                                <div class="item" data-value="NAT">National</div>
+                                <div class="item" data-value="ACT">ACT</div>
+                                <div class="item" data-value="NSW">NSW</div>
+                                <div class="item" data-value="NT">NT</div>
+                                <div class="item" data-value="QLD">QLD</div>
+                                <div class="item" data-value="SA">SA</div>
+                                <div class="item" data-value="TAS">TAS</div>
+                                <div class="item" data-value="VIC">VIC</div>
+                                <div class="item" data-value="WA">WA</div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="option-competitions" checked>
+                        <label>Competitions&nbsp&nbsp</label>
+                    </div>
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="option-workshops" checked>
+                        <label>Workshops</label>
+                    </div>
+                    <br><br>
+                    <a class="ui button" href="https://rcja.app/calendar/">
+                        Return to Calendar View
+                    </a>
+                    <button class="ui button primary" id="btn-submit">
+                        Copy Calendar Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="copyModal" class="ui modal smallModal">
+        <div class="header">Calendar Link</div>
+        <div class="content">
+            Use the following link to add the calendar to your favourite calendar app.
+            <br>
+            Click here for 
+                <a href="https://support.microsoft.com/en-us/office/import-or-subscribe-to-a-calendar-in-outlook-com-cff1429c-5af6-41ec-a5b4-74f2c278e98c" target="_blank">Microsoft Outlook</a>, 
+                <a href="https://support.google.com/calendar/answer/37100?hl=en" target="_blank">Google Calendar</a>, or 
+                <a href="https://support.apple.com/en-au/guide/calendar/icl1022/11.0/mac/13.0" target="_blank">Apple Calendar</a> instructions
+            <br><br>
+            <div class="ui info message" id="textToCopy"></div>
+        </div>
+        <div class="actions">
+            <div class="ui primary button" onclick="copyText()" id="copyTextBtn">Copy to clipboard</div>
+            <div class="ui cancel button">Cancel</div>
+        </div>
+    </div>
+<script>
+    $('input[type="checkbox"]').change(refreshForm)
+    $('#btn-submit').click(copyLink)
+    $('#regionDropdown').dropdown({
+        onChange: refreshForm
+    });
+
+    let opt = { regions: "", competitions: true, workshops: true }
+    let formValidity = 1; // 0 = No type, 1 = Acceptable
+
+    function refreshForm() {
+        $('#alert-region').addClass('hidden');
+        $('#alert-type').addClass('hidden');
+
+        opt = {
+            regions: document.getElementById('option-regions').value,
+            competitions: document.getElementById('option-competitions').checked,
+            workshops: document.getElementById('option-workshops').checked,
+        }
+
+        if ((!opt.competitions && !opt.workshops)) {
+            $('#btn-submit').removeClass('primary');
+            formValidity = 0;
+        } else {
+            $('#btn-submit').addClass('primary');
+            formValidity = 1;
+        }
+    }
+
+    function copyLink() {
+        if (formValidity === 0) {
+            $('#alert-type').removeClass('hidden');
+            return;
+        }
+        // Create URL params, regionString should be regions=${opt.regions} only if opt.regions is not empty
+        // Then workshops and competitions should just be on their own if they are true (no need for a value) otherwise leave out
+        let params = [];
+        if (opt.regions) { params.push(`regions=${opt.regions}`); }
+        if (!opt.competitions) { params.push(`hide=competitions`); }
+        if (!opt.workshops) { params.push(`hide=workshops`); }
+
+        const url = `https://rcja.app/calendar/file${params.length > 0 ? "?" + params.join('&') : ""}`;
+        
+        document.getElementById('textToCopy').textContent = url;
+        openModal();
+    }
+
+    function openModal() {
+        $('#copyModal').modal('show');
+    }
+
+    function copyText() {
+        var text = document.getElementById("textToCopy").textContent;
+        navigator.clipboard.writeText(text);
+
+        $('#copyTextBtn').text('Copied!');
+        setTimeout(() => {
+            $('#copyModal').modal('hide');
+            $('#copyTextBtn').text('Copy to clipboard');
+        }, 1000);
+    }
+</script>
+</body>
+</html>
