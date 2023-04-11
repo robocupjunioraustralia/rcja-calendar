@@ -55,7 +55,7 @@ const fetchEvents = async () => {
     
     for (const state of states) {
       const { data: stateEvents } = await axios.get(
-        `https://enter.robocupjunior.org.au/api/v1/public/states/${state.abbreviation}/upcomingEvents/`
+        `https://enter.robocupjunior.org.au/api/v1/public/states/${state.abbreviation}/allEventsDetailed`
       );
       stateEvents.forEach(event => event.realStateAbbr = state.abbreviation);
       events[state.abbreviation] = stateEvents;
