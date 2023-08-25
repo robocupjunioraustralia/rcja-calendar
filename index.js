@@ -27,7 +27,7 @@ morgan.token('statusColor', (req, res, args) => {
 
   return '\x1b[' + color + 'm' + status + '\x1b[0m';
 });
-app.use(morgan(':statusColor :method :url - :response-time ms - :remote-addr :remote-user'));
+app.use(morgan(':statusColor :method :url - :response-time ms - :req[x-Forwarded-For] :remote-user'));
 
 // State RCJ title mapping information, will fall back to "RCJA" if no mapping is found
 const stateTitleMapping = {
