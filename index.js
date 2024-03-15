@@ -1,3 +1,5 @@
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node");
 const express = require("express");
 const morgan = require("morgan");
 const ical = require("ical-generator");
@@ -10,7 +12,25 @@ let cachedStates = null;
 let cachedEvents = null;
 
 const app = express();
+app.set('trust proxy', true);
 app.set('case sensitive routing', false);
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+      new Sentry.Integrations.Http({ tracing: true }),
+      new Sentry.Integrations.Express({ app }),
+      nodeProfilingIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+  });
+
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 morgan.token('statusColor', (req, res, args) => {
@@ -217,6 +237,10 @@ app.get("/sync", (req, res) => {
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public/calendar.html"));
 });
+
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 app.listen(process.env.HTTP_PORT, () => {
   console.log(`Calendar server listening on port ${process.env.HTTP_PORT}`);
