@@ -111,6 +111,18 @@
                 <div class="ui text container segment">
                     <div class="controlBtns">
                         <div class="ui middle aligned labels" data-regionToggles></div>
+                        <div class="ui middle aligned labels">
+                            <a class="ui icon label active" style="background-color: #5c5c5c; color: white" data-event-type="Competitions" onclick="toggleEventType('Competitions')">
+                                Competitions
+                                <i class="icon close"></i>
+                                <i class="icon plus" style="display: none"></i>
+                            </a>
+                            <a class="ui icon label active" style="background-color: #5c5c5c; color: white" data-event-type="Workshops" onclick="toggleEventType('Workshops')">
+                                Workshops
+                                <i class="icon close"></i>
+                                <i class="icon plus" style="display: none"></i>
+                            </a>
+                        </div>
                         <div class="ui labels" style="margin-left: auto;">
                             <a class="ui icon label" style="background-color: #009c95; color: white" href="https://rcja.app/calendar/sync">
                                 <i class="icon calendar alternate outline" style="margin-right: 4px"></i>
@@ -127,6 +139,18 @@
     <div id="embedContainer" style="display: none">
         <div class="controlBtns">
             <div class="ui labels" data-regionToggles></div>
+            <div class="ui middle aligned labels">
+                <a class="ui icon label active" style="background-color: #5c5c5c; color: white" data-event-type="Competitions" onclick="toggleEventType('Competitions')">
+                    Competitions
+                    <i class="icon close"></i>
+                    <i class="icon plus" style="display: none"></i>
+                </a>
+                <a class="ui icon label active" style="background-color: #5c5c5c; color: white" data-event-type="Workshops" onclick="toggleEventType('Workshops')">
+                    Workshops
+                    <i class="icon close"></i>
+                    <i class="icon plus" style="display: none"></i>
+                </a>
+            </div>
             <div class="ui labels" style="margin-left: auto;">
                 <a class="ui icon label" style="background-color: #009c95; color: white" href="https://rcja.app/calendar/sync">
                     <i class="icon calendar alternate outline" style="margin-right: 4px"></i>
@@ -157,11 +181,14 @@
         "NAT": "#073b4c",
         "_OTHER": "#052833"
     }
+
+    const eventTypes = ["Competitions", "Workshops"];
     const regions = ["NSW", "QLD", "SA", "TAS", "VIC", "WA", "ACT", "NT", "NAT"];
     let otherRegions = [];
 
     const urlParams = new URLSearchParams(window.location.search);
     const requestedRegions = urlParams.get('regions');
+    const requestedEventTypes = urlParams.get('eventTypes')?.replaceAll(" ", "").toUpperCase().split(",") ?? [];
     const isEmbed = urlParams.get('embed') == "true";
     
     const viewOptions = ["multiMonthYear", "dayGridMonth", "listYear"]
@@ -185,10 +212,9 @@
     const calendarEl = document.getElementById(isEmbed ? 'calendarEmbed' : 'calendar');
     let calendar = null;
     document.addEventListener('DOMContentLoaded', function() {
-        
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: initialView,
-            initialDate: '2023-03-07',
+            initialDate: new Date().getFullYear() + "-01-01",
             multiMonthMaxColumns: 2,
             headerToolbar: {
                 left: 'prev,next today',
@@ -198,12 +224,32 @@
             eventClick: onEventClick,
             firstDay: 1,
         });
+
+        if (requestedEventTypes.length > 0) {
+            for (const eventType of eventTypes) {
+                const eventTypeLabel = document.querySelector(`a[data-event-type="${eventType}"]`);
+                const isRequested = requestedEventTypes.includes(eventType.toUpperCase());
+                
+                if (isRequested) {
+                    eventTypeLabel.classList.add('active');
+                    eventTypeLabel.style.backgroundColor = "#5c5c5c";
+                    eventTypeLabel.style.color = "white";
+                    
+                    eventTypeLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
+                    eventTypeLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
+                } else {
+                    eventTypeLabel.classList.remove('active');
+                    eventTypeLabel.style.backgroundColor = "";
+                    eventTypeLabel.style.color = "";
+                    
+                    eventTypeLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
+                    eventTypeLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
+                }
+            }
+        }
         
         for (const region of regions) {
             const isRequested = requestedRegions?.includes(region) || !requestedRegions;
-            if (isRequested) {
-                addRegionEventSource(region);
-            }
             
             $('[data-regionToggles]').append(`
                 <a 
@@ -218,7 +264,8 @@
                 </a>
             `);
         }
-        
+
+        updateEventSources();
         calendar.render();
     
         $.ajax({
@@ -246,7 +293,7 @@
                         </a>
                     `);
 
-                    addOtherRegionEventSources();
+                    updateEventSources();
                 }
             },
             error: function() {
@@ -269,6 +316,9 @@
         }
         $(window).resize(resize);
         resize();
+
+        // Scroll the calendar to the current date
+        calendar.gotoDate(new Date());
     });
 
 
@@ -283,11 +333,6 @@
             
             regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
             regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
-            calendar.getEventSources().forEach((source) => {
-                if (source.internalEventSource.publicId === region) {
-                    source.remove();
-                }
-            });
         } else {
             regionLabel.classList.add('active');
             
@@ -296,20 +341,20 @@
             
             regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
             regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
-            
-            addRegionEventSource(region);
         }
+
+        updateEventSources();
     }
-    
-    function addRegionEventSource(region) {
+
+    function addEventSource(apiURL, eventColor) {
         calendar.addEventSource({
-            id: region,
-            events: function(info, successCallback, failureCallback) {
+            id: apiURL,
+            events: function (info, successCallback, failureCallback) {
                 $.ajax({
-                    url: 'https://rcja.app/calendar/api/events/json?regions=' + region,
+                    url: apiURL,
                     type: 'GET',
                     dataType: 'json',
-                    success: function(data) {
+                    success: function (data) {
                         let eventData = [];
                         for (const event of data) {
                             eventData.push({
@@ -317,13 +362,13 @@
                                 start: event.start,
                                 end: event.end,
                                 allDay: event.allDay,
-                                color: regionColours[event.state],
+                                color: eventColor,
                                 eventDetails: event,
                             });
                         }
                         successCallback(eventData);
                     },
-                    error: function(err) {
+                    error: function (err) {
                         console.log(err);
                         failureCallback(err);
                     }
@@ -332,36 +377,36 @@
         });
     }
 
-    function addOtherRegionEventSources() {
-        for (const region of otherRegions) {
-            calendar.addEventSource({
-                id: region,
-                events: function(info, successCallback, failureCallback) {
-                    $.ajax({
-                        url: 'https://rcja.app/calendar/api/events/json?regions=' + region,
-                        type: 'GET',
-                        dataType: 'json',
-                        success: function(data) {
-                            let eventData = [];
-                            for (const event of data) {
-                                eventData.push({
-                                    title: event.title,
-                                    start: event.start,
-                                    end: event.end,
-                                    allDay: event.allDay,
-                                    color: regionColours["_OTHER"],
-                                    eventDetails: event,
-                                });
-                            }
-                            successCallback(eventData);
-                        },
-                        error: function(err) {
-                            console.log(err);
-                            failureCallback(err);
-                        }
-                    });
-                },
-            });
+    function updateEventSources() {
+        const activeRegions = regions.filter(region => document.querySelector(`a[data-region="${region}"]`).classList.contains('active'));
+        const activeOtherRegions = document.querySelector(`a[data-region="_OTHER"]`)?.classList.contains('active') ? otherRegions : [];
+        
+        const inactiveEventFilters = eventTypes.filter(type => document.querySelector(`a[data-event-type="${type}"]`).classList.contains('active') === false);
+        const inactiveEventFiltersQuery = inactiveEventFilters.length > 0 ? `&hide=${inactiveEventFilters.join(',').toLowerCase()}` : '';
+
+        const requestedEventSources = [];
+        for (const region of [...activeRegions, ...activeOtherRegions]) {
+            const isOtherRegion = activeOtherRegions.includes(region);
+
+            requestedEventSources.push({
+                url: `https://rcja.app/calendar/api/events/json?regions=${region}${inactiveEventFiltersQuery}`,
+                color: isOtherRegion ? regionColours["_OTHER"] : regionColours[region],
+            })
+        }
+
+        const requestedEventSourceIDs = requestedEventSources.map(source => source.url);
+        for (const currentSource of calendar.getEventSources()) {
+            if (!requestedEventSourceIDs.includes(currentSource.internalEventSource.publicId)) {
+                console.log("Removing source", currentSource.internalEventSource.publicId)
+                currentSource.remove();
+            }
+        }
+        
+        const currentEventSourceIDs = calendar.getEventSources().map(source => source.internalEventSource.publicId);
+        const eventSourcesToAdd = requestedEventSources.filter(source => !currentEventSourceIDs.includes(source.url));
+
+        for (const source of eventSourcesToAdd) {
+            addEventSource(source.url, source.color);
         }
     }
 
@@ -376,11 +421,6 @@
             
             regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
             regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
-            calendar.getEventSources().forEach((source) => {
-                if (otherRegions.includes(source.internalEventSource.publicId)) {
-                    source.remove();
-                }
-            });
         } else {
             regionLabel.classList.add('active');
             
@@ -389,9 +429,40 @@
             
             regionLabel.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
             regionLabel.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
-            
-            addOtherRegionEventSources();
         }
+
+        updateEventSources();
+    }
+
+    
+    function toggleEventType(eventType) {
+        const eventTypeElsToToggle = document.querySelectorAll(`a[data-event-type="${eventType}"]`);
+        const isCurrentlyActive = eventTypeElsToToggle[0].classList.contains('active');
+
+        // Ensure only one event type is deactivated at a time
+        document.querySelectorAll('[data-event-type]:not(.active)').forEach((label) => {
+            label.classList.add('active');
+            label.style.backgroundColor = "#5c5c5c";
+            label.style.color = "white";
+            
+            label.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'inline-block';
+            label.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'none';
+        });
+        
+        // Deactivate the event type if it was active beforehand
+        if (isCurrentlyActive) {
+            for (const eventTypeToToggle of eventTypeElsToToggle) {
+                eventTypeToToggle.classList.remove('active');
+                eventTypeToToggle.style.backgroundColor = "";
+                eventTypeToToggle.style.color = "";
+                
+                eventTypeToToggle.querySelector('i.icon.' + icon_remove.replaceAll(" ", ".")).style.display = 'none';
+                eventTypeToToggle.querySelector('i.icon.' + icon_add.replaceAll(" ", ".")).style.display = 'inline-block';
+            }
+        }
+
+        // Allow the button to render first...
+        setTimeout(updateEventSources, 0);
     }
 
 
