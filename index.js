@@ -59,8 +59,13 @@ const stateTitleMapping = {
   "NT": "RCJNT",
   "ACT": "RCJACT",
   "TAS": "RCJTAS",
-  "NAT": "RCJA"
+  "NAT": "RCJA",
+  "NZ": "RCJNZ",
 }
+
+// All state codes for australian events (excludes NZ)
+const ausStateCodes = ["VIC", "NSW", "QLD", "SA", "WA", "NT", "ACT", "TAS", "NAT"];
+
 // Background task to fetch events from the RCJA Entry System API and store them in a local cache
 // This is to avoid having to make a request to the API every time a user requests a calendar file
 const fetchEvents = async () => {
@@ -109,6 +114,15 @@ app.get("/file", async (req, res) => {
     if (requestedStateCodes.some(state => !stateCodes.includes(state))) {
       res.status(400).send({ error: "Invalid state code(s) provided." });
       return;
+    }
+
+    // if at least one state provided is an Australian state,
+    // and NAT has not already been requested, include NAT events in the response as well
+    if (
+      requestedStateCodes.some(state => ausStateCodes.includes(state)) 
+      && !requestedStateCodes.includes("NAT")
+    ) {
+      requestedStateCodes.push("NAT");
     }
 
     requestedStateCodes.forEach(state => {
